@@ -20,6 +20,7 @@ korlibs-compression = { module = "com.soywiz:korlibs-compression", version.ref =
 korlibs-crypto = { module = "com.soywiz:korlibs-crypto", version.ref = "korlibs" }
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+exposed-dao = { module = "org.jetbrains.exposed:exposed-dao", version.ref = "exposed" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
