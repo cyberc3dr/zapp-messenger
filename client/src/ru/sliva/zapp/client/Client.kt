@@ -11,6 +11,10 @@ import korlibs.io.compression.uncompress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.Buffer
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.cbor.Cbor
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.encodeToByteArray
 import ru.sliva.zapp.data.UserCredentials
 import ru.sliva.zapp.data.UserType
 import ru.sliva.zapp.data.protocol.*
@@ -18,7 +22,6 @@ import ru.sliva.zapp.data.utils.AES.decryptAes
 import ru.sliva.zapp.data.utils.AES.encryptAes
 import ru.sliva.zapp.data.utils.RSA
 import ru.sliva.zapp.data.utils.RSA.decrypt
-import ru.sliva.zapp.data.utils.copyOrNull
 
 object Client {
 
@@ -45,8 +48,11 @@ object Client {
 
         sendPacket(HandshakeC2S(rsaKeyPair.public))
 
-        while(true) {
-            readPacket()?.let { handlePacket(it) } ?: println("Null packet")
+        while(true) try {
+            handlePacket(readPacket())
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            break
         }
     }
 
@@ -67,24 +73,22 @@ object Client {
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     suspend fun sendPacket(packet: ServerBoundPacket) {
-        val buffer = Buffer()
+        var bytes = Cbor.encodeToByteArray<ServerBoundPacket>(packet)
 
-        packet.write(buffer)
-
-        var bytes = buffer.readBytes().compress(GZIP)
+        bytes = bytes.compress(GZIP)
 
         if(aesKey != null) {
             bytes = bytes.encryptAes(aesKey!!)
         }
 
-        writeChannel.writeByte(packet.packetId)
         writeChannel.writeInt(bytes.size)
         writeChannel.writeFully(bytes)
     }
 
-    suspend fun readPacket() : ClientBoundPacket? {
-        val packetId = readChannel.readByte()
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun readPacket() : ClientBoundPacket {
         val dataLength = readChannel.readInt()
 
         var bytes = readChannel.readByteArray(dataLength)
@@ -97,15 +101,6 @@ object Client {
 
         bytes = bytes.uncompress(GZIP)
 
-        val buffer = Buffer()
-
-        buffer.write(bytes)
-
-        return clientBoundPackets
-            .firstOrNull { it.packetId == packetId }
-            ?.copyOrNull()
-            ?.apply {
-                read(buffer)
-            }
+        return Cbor.decodeFromByteArray(bytes)
     }
 }

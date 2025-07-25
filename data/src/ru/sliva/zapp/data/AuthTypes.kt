@@ -20,12 +20,14 @@ enum class UserType(val id: Byte) {
 sealed interface Credentials
 
 @Serializable
+@SerialName("user_credentials")
 class UserCredentials(
     val login: String,
     val password: String
 ) : Credentials
 
 @Serializable
+@SerialName("bot_credentials")
 class BotCredentials(
     val token: String
 ) : Credentials

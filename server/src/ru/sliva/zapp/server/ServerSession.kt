@@ -13,13 +13,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.io.Buffer
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.cbor.Cbor
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.encodeToByteArray
 import ru.sliva.zapp.data.User
 import ru.sliva.zapp.data.UserCredentials
 import ru.sliva.zapp.data.protocol.*
 import ru.sliva.zapp.data.utils.AES.decryptAes
 import ru.sliva.zapp.data.utils.AES.encryptAes
 import ru.sliva.zapp.data.utils.RSA.encrypt
-import ru.sliva.zapp.data.utils.copyOrNull
 import java.security.PublicKey
 import kotlin.coroutines.CoroutineContext
 
@@ -45,8 +48,11 @@ class ServerSession(val socket: Socket) : CoroutineScope {
 
     init {
         launch {
-            while(true) {
-                readPacket()?.let { handlePacket(it) }
+            while(true) try {
+                handlePacket(readPacket())
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                break
             }
         }
     }
@@ -80,12 +86,9 @@ class ServerSession(val socket: Socket) : CoroutineScope {
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     suspend fun sendPacket(packet: ClientBoundPacket) {
-        val buffer = Buffer()
-
-        packet.write(buffer)
-
-        var bytes = buffer.readBytes()
+        var bytes = Cbor.encodeToByteArray<ClientBoundPacket>(packet)
 
         bytes = bytes.compress(GZIP)
 
@@ -95,13 +98,12 @@ class ServerSession(val socket: Socket) : CoroutineScope {
             bytes = rsaKey!!.encrypt(bytes)
         }
 
-        writeChannel.writeByte(packet.packetId)
         writeChannel.writeInt(bytes.size)
         writeChannel.writeFully(bytes)
     }
 
-    suspend fun readPacket() : ServerBoundPacket? {
-        val packetId = readChannel.readByte()
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun readPacket() : ServerBoundPacket {
         val dataLength = readChannel.readInt()
 
         var bytes = readChannel.readByteArray(dataLength)
@@ -112,15 +114,6 @@ class ServerSession(val socket: Socket) : CoroutineScope {
 
         bytes = bytes.uncompress(GZIP)
 
-        val buffer = Buffer()
-
-        buffer.write(bytes)
-
-        return serverBoundPackets
-            .firstOrNull { it.packetId == packetId }
-            ?.copyOrNull()
-            ?.apply {
-                read(buffer)
-            }
+        return Cbor.decodeFromByteArray(bytes)
     }
 }

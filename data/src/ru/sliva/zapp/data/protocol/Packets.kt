@@ -1,27 +1,12 @@
 package ru.sliva.zapp.data.protocol
 
-import kotlinx.io.Buffer
+import kotlinx.serialization.Serializable
 
-val serverBoundPackets = listOf(
-    HandshakeC2S(),
-    LoginC2S()
-)
+@Serializable
+sealed interface Packet
 
-val clientBoundPackets = listOf(
-    HandshakeS2C(),
-    SuccessLogin()
-)
-
-sealed interface Packet {
-
-    val packetId: Byte
-
-    fun write(buffer: Buffer)
-
-    fun read(buffer: Buffer)
-
-}
-
+@Serializable
 sealed interface ClientBoundPacket : Packet
 
+@Serializable
 sealed interface ServerBoundPacket : Packet

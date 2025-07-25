@@ -12,6 +12,7 @@ sealed interface ChatEvent {
 }
 
 @Serializable
+@SerialName("chat_join")
 class ChatJoin(
     override val id: Int,
     override val sender: Int,
@@ -20,6 +21,7 @@ class ChatJoin(
 ) : ChatEvent
 
 @Serializable
+@SerialName("chat_leave")
 class ChatLeave(
     override val id: Int,
     override val sender: Int,
@@ -28,6 +30,7 @@ class ChatLeave(
 ) : ChatEvent
 
 @Serializable
+@SerialName("message")
 class Message(
     override val id: Int,
     override val sender: Int,
@@ -41,6 +44,7 @@ class Message(
 sealed interface Attachment
 
 @Serializable
+@SerialName("file")
 open class File(
     val size: Byte
 ) : Attachment
